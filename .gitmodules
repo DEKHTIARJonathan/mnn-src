@@ -1,0 +1,3 @@
+[submodule "mnn"]
+	path = mnn
+	url = https://github.com/alibaba/MNN.git
