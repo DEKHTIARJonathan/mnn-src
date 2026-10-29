@@ -1,0 +1,5 @@
+/target/
+/dist/
+/testcrate/target/
+/mnn-sources.tar.xz
+__pycache__/

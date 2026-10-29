@@ -1,0 +1,30 @@
+[package]
+name = "mnn-src"
+version = "3.4.0-rc1"
+edition = "2021"
+license = "Apache-2.0"
+description = "Pristine MNN sources and native build support."
+repository = "https://github.com/DEKHTIARJonathan/mnn-src"
+links = "mnn"
+include = ["src", "build.rs", "mnn-sources.tar.xz", "README.md", "LICENSE.md"]
+
+[features]
+default = ["static"]
+static = []
+shared = []
+metal = []
+opencl = []
+vulkan = []
+cuda = []
+kleidiai = []
+bf16 = []
+low-memory = []
+transformer-fuse = []
+
+[build-dependencies]
+cmake = "0.1"
+lzma-rust2 = { version = "0.24", default-features = false, features = ["std", "xz"] }
+tar = { version = "0.4", default-features = false }
+
+[workspace]
+exclude = ["mnn", "testcrate", "target"]
