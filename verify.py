@@ -14,7 +14,12 @@ root = Path(__file__).resolve().parent
 version = tomllib.loads((root / 'Cargo.toml').read_text())['package']['version']
 archive = root / 'dist' / f'mnn-src-{version}.crate'
 assert archive.stat().st_size < 10_000_000
-work = Path(tempfile.mkdtemp(prefix='mnn-consumer-'))
+if os.environ.get('MNN_TEST_WORK_DIR'):
+    # A stable, fresh path permits compiler-cache reuse across isolated CI jobs.
+    work = Path(os.environ['MNN_TEST_WORK_DIR']).resolve()
+    work.mkdir(parents=True, exist_ok=False)
+else:
+    work = Path(tempfile.mkdtemp(prefix='mnn-consumer-'))
 print(f'Isolated consumer: {work}', flush=True)
 with tarfile.open(archive) as source:
     source.extractall(work, filter='data')
