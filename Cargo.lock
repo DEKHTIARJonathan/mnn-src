@@ -113,7 +113,7 @@ dependencies = [
 
 [[package]]
 name = "mnn-src"
-version = "3.4.0-rc1"
+version = "3.6.1-rc1"
 dependencies = [
  "cmake",
  "lzma-rust2",
