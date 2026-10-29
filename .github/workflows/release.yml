@@ -11,7 +11,10 @@ permissions:
 env:
   RUSTC_WRAPPER: sccache
   CARGO_INCREMENTAL: '0'
-  SCCACHE_GHA_ENABLED: 'true'
+  SCCACHE_DIR: ${{ github.workspace }}/target/sccache
+  SCCACHE_CACHE_SIZE: 1G
+  MNN_CACHE_CASE: tools
+  SCCACHE_DIRECT: 'false'
   SCCACHE_BASEDIRS: ${{ github.workspace }}
   CMAKE_TOOLCHAIN_FILE: ${{ github.workspace }}/.github/sccache.cmake
   MNN_TEST_WORK_DIR: ${{ github.workspace }}/target/ci-consumer
@@ -27,9 +30,31 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.98.0
         with:
           components: rustfmt
-      - uses: mozilla-actions/sccache-action@v0.0.11
+      # Snapshot compiler objects once per job instead of one network request
+      # per compilation. Each object still uses sccache's compiler/input hash.
+      - &compiler-cache
+        uses: actions/cache@v6.1.0
+        with:
+          path: ${{ env.SCCACHE_DIR }}
+          key: >-
+            ${{ format('sccache-local-v1-{0}-{1}-{2}-{3}-{4}-{5}',
+                runner.os, runner.arch, github.job, env.MNN_CACHE_CASE,
+                github.run_id, github.run_attempt) }}
+          restore-keys: >-
+            ${{ format('sccache-local-v1-{0}-{1}-{2}-{3}-',
+                runner.os, runner.arch, github.job, env.MNN_CACHE_CASE) }}
+      - &setup-sccache
+        uses: mozilla-actions/sccache-action@v0.0.11
         with:
           version: v0.19.0
+          # Report explicitly before stopping the server and saving its files.
+          disable_annotations: true
+      - &start-sccache
+        name: Start local compiler cache
+        shell: bash
+        run: |
+          mkdir -p "$SCCACHE_DIR"
+          sccache --start-server
       - uses: cargo-bins/cargo-binstall@v1.26.1
       - run: cargo binstall --locked --no-confirm cargo-audit@0.22.2
       - uses: j178/prek-action@v3.1.0
@@ -62,6 +87,17 @@ jobs:
                                     "features": "static," + backend})
           with open(os.environ["GITHUB_OUTPUT"], "a") as output:
               output.write("matrix=" + json.dumps({"include": cases}) + "\n")
+      - &compiler-cache-stats
+        name: Report and flush compiler cache
+        if: always() && env.SCCACHE_PATH != ''
+        shell: bash
+        run: |
+          sccache --show-stats --stats-format=json
+          {
+            echo '```text'
+            sccache --stop-server
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
   package:
     needs: pre-commit
     runs-on: ubuntu-latest
@@ -70,9 +106,9 @@ jobs:
         with:
           submodules: recursive
       - uses: dtolnay/rust-toolchain@1.98.0
-      - uses: mozilla-actions/sccache-action@v0.0.11
-        with:
-          version: v0.19.0
+      - *compiler-cache
+      - *setup-sccache
+      - *start-sccache
       - name: Fetch the pinned upstream release tag
         shell: bash
         run: |
@@ -95,7 +131,10 @@ jobs:
           name: candidate
           path: dist/*.crate
           if-no-files-found: error
+      - *compiler-cache-stats
   smoke-tests:
+    env:
+      MNN_CACHE_CASE: ${{ matrix.features }}
     needs: [pre-commit, package]
     strategy:
       fail-fast: false
@@ -107,9 +146,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.98.0
       - uses: ilammy/msvc-dev-cmd@v1.13.0
         if: runner.os == 'Windows'
-      - uses: mozilla-actions/sccache-action@v0.0.11
-        with:
-          version: v0.19.0
+      - *compiler-cache
+      - *setup-sccache
+      - *start-sccache
       - uses: actions/download-artifact@v8.0.2
         with:
           name: candidate
@@ -119,7 +158,10 @@ jobs:
           MNN_TEST_FEATURES: ${{ matrix.features }}
           CMAKE_GENERATOR: Ninja
         run: python verify.py
+      - *compiler-cache-stats
   cuda-builds:
+    env:
+      MNN_CACHE_CASE: ${{ matrix.features }}
     needs: package
     runs-on: ubuntu-latest
     container: nvidia/cuda:12.8.1-devel-ubuntu24.04
@@ -139,9 +181,9 @@ jobs:
           apt-get install -y build-essential cmake ninja-build python3 curl git
       - uses: actions/checkout@v7.0.1
       - uses: dtolnay/rust-toolchain@1.98.0
-      - uses: mozilla-actions/sccache-action@v0.0.11
-        with:
-          version: v0.19.0
+      - *compiler-cache
+      - *setup-sccache
+      - *start-sccache
       - uses: actions/download-artifact@v8.0.2
         with:
           name: candidate
@@ -153,6 +195,7 @@ jobs:
           CMAKE_GENERATOR: Ninja
           CMAKE_BUILD_PARALLEL_LEVEL: '2'
         run: python3 verify.py
+      - *compiler-cache-stats
   publish:
     if: github.ref_type == 'tag'
     needs: [smoke-tests, cuda-builds]
@@ -164,9 +207,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: dtolnay/rust-toolchain@1.98.0
-      - uses: mozilla-actions/sccache-action@v0.0.11
-        with:
-          version: v0.19.0
+      - *compiler-cache
+      - *setup-sccache
+      - *start-sccache
       - uses: actions/download-artifact@v8.0.2
         with:
           name: candidate
@@ -190,6 +233,7 @@ jobs:
         run: >-
           cargo publish --manifest-path target/publication/Cargo.toml
           --locked --no-verify
+      - *compiler-cache-stats
   verify:
     if: github.ref_type == 'tag'
     needs: publish
