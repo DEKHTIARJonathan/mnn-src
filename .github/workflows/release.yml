@@ -32,6 +32,10 @@ jobs:
           components: rustfmt
       # Snapshot compiler objects once per job instead of one network request
       # per compilation. Each object still uses sccache's compiler/input hash.
+      - &compiler-cache-key
+        name: Normalize compiler cache case
+        shell: bash
+        run: echo "MNN_CACHE_CASE=${MNN_CACHE_CASE//,/_}" >> "$GITHUB_ENV"
       - &compiler-cache
         uses: actions/cache@v6.1.0
         with:
@@ -106,6 +110,7 @@ jobs:
         with:
           submodules: recursive
       - uses: dtolnay/rust-toolchain@1.98.0
+      - *compiler-cache-key
       - *compiler-cache
       - *setup-sccache
       - *start-sccache
@@ -146,6 +151,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.98.0
       - uses: ilammy/msvc-dev-cmd@v1.13.0
         if: runner.os == 'Windows'
+      - *compiler-cache-key
       - *compiler-cache
       - *setup-sccache
       - *start-sccache
@@ -181,6 +187,7 @@ jobs:
           apt-get install -y build-essential cmake ninja-build python3 curl git
       - uses: actions/checkout@v7.0.1
       - uses: dtolnay/rust-toolchain@1.98.0
+      - *compiler-cache-key
       - *compiler-cache
       - *setup-sccache
       - *start-sccache
@@ -207,6 +214,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: dtolnay/rust-toolchain@1.98.0
+      - *compiler-cache-key
       - *compiler-cache
       - *setup-sccache
       - *start-sccache
