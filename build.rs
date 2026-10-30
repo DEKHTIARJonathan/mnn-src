@@ -50,6 +50,22 @@ fn main() {
     archive.unpack(&sources).expect("extract MNN sources");
     std::io::copy(&mut archive.into_inner(), &mut std::io::sink())
         .expect("validate complete XZ stream");
+    let header = fs::read_to_string(sources.join("mnn/include/MNN/MNNDefine.h")).unwrap();
+    let native_version = ["MAJOR", "MINOR", "PATCH"]
+        .map(|part| {
+            let prefix = format!("#define MNN_VERSION_{part} ");
+            header
+                .lines()
+                .find_map(|line| line.strip_prefix(&prefix))
+                .expect("native version macro")
+                .trim()
+        })
+        .join(".");
+    assert_eq!(
+        native_version,
+        env!("CARGO_PKG_VERSION").split('-').next().unwrap(),
+        "prepared sources do not match Cargo.toml; run make setup"
+    );
     let mut config = cmake::Config::new(sources.join("mnn"));
     config
         .profile("Release")

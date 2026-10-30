@@ -16,12 +16,13 @@ endif()
 # Keep nvcc in its SDK and give FindCUDA an executable wrapper under OUT_DIR.
 find_program(MNN_NVCC nvcc)
 if(MNN_NVCC AND CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
+    find_program(MNN_PYTHON python3 REQUIRED)
     get_filename_component(cuda_bin "${MNN_NVCC}" DIRECTORY)
     get_filename_component(CUDA_TOOLKIT_ROOT_DIR "${cuda_bin}" DIRECTORY)
     set(CUDA_TOOLKIT_ROOT_DIR "${CUDA_TOOLKIT_ROOT_DIR}" CACHE PATH "CUDA SDK")
     set(nvcc_wrapper "${CMAKE_BINARY_DIR}/sccache-nvcc")
     file(WRITE "${nvcc_wrapper}"
-        "#!/bin/sh\nexec \"${MNN_SCCACHE}\" \"${MNN_NVCC}\" \"$@\"\n")
+        "#!/bin/sh\nexec \"${MNN_PYTHON}\" \"${CMAKE_CURRENT_LIST_DIR}/sccache-nvcc.py\" \"${MNN_SCCACHE}\" \"${MNN_NVCC}\" \"$@\"\n")
     file(CHMOD "${nvcc_wrapper}" PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
         GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
     # A normal variable survives FindCUDA clearing its cache on SDK discovery.

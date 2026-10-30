@@ -41,14 +41,13 @@ completeness.
 
 ## FrameForge migration
 
-FrameForge currently requires MNN 3.6.1. Qualify that version on a separate
-branch after the 3.4.0 baseline. Add the source crate as an optional normal
-dependency of insta360-rs's AI features and consume DEP_MNN_INCLUDE instead of
-MNN_ROOT and private cache markers. Preserve its adapter, models, exact runtime
-version checks, CPU high precision, and thread budgets. Remove MNN
-acquisition/prewarming only after numerical and packaged application checks
-pass. Keep Windows CRT and license staging: the GStreamer helper also consumes
-those CRT files.
+FrameForge requires MNN 3.6.1; select the matching crate version. Add the source
+crate as an optional normal dependency of insta360-rs's AI features and consume
+DEP_MNN_INCLUDE instead of MNN_ROOT and private cache markers. Preserve its
+adapter, models, exact runtime version checks, CPU high precision, and thread
+budgets. Remove MNN acquisition/prewarming only after numerical and packaged
+application checks pass. Keep Windows CRT and license staging: the GStreamer
+helper also consumes those CRT files.
 
 The process-global MNN thread pool retains its first capacity. Run thread-budget
 qualification in fresh processes with the largest budget initialized first.

@@ -22,7 +22,12 @@ else:
     work = Path(tempfile.mkdtemp(prefix='mnn-consumer-'))
 print(f'Isolated consumer: {work}', flush=True)
 with tarfile.open(archive) as source:
-    source.extractall(work, filter='data')
+    members = source.getmembers()
+    for member in members:
+        path = Path(member.name)
+        if path.is_absolute() or '..' in path.parts or not (member.isfile() or member.isdir()):
+            raise ValueError(f'Unsafe crate archive member: {member.name}')
+    source.extractall(work, members=members)
 crate = work / f'mnn-src-{version}'
 def fingerprint():
     return {str(p.relative_to(crate)): hashlib.sha256(p.read_bytes()).hexdigest()
