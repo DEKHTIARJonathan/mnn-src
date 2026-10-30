@@ -18,6 +18,10 @@ targets Linux x86_64 with a compatible CUDA 12.x toolkit. Backend compilation
 does not establish GPU numerical qualification. Other SDK backends, converters,
 training, and application toolchains are outside this crate's scope.
 
+CUDA builds select C++17 for host and device compilation: MNN 3.5's non-fused
+CUDA kernels use newer language features than its default C++11 setting allows.
+CUDA configurations using cuBLAS also require its compatible runtime library.
+
 Use a direct normal dependency and `use mnn_src as _;`. The dependent build
 script receives DEP_MNN_ROOT, INCLUDE, LIB, RUNTIME_DIR, LICENSE_DIR, VERSION
 and LINK_KIND metadata. Compile your C++ adapter against INCLUDE; native linking

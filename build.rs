@@ -116,6 +116,11 @@ fn main() {
             "v2.9.0"
         });
     if feature("cuda") {
+        // MNN 3.5 CUDA kernels require generic lambdas even without fusion.
+        // Keep FindCUDA's host and device language modes consistent.
+        config
+            .define("CMAKE_CXX_STANDARD", "17")
+            .define("CUDA_NVCC_FLAGS", "--std=c++17");
         let expected = sources.join("mnn/3rd_party/cutlass");
         fs::create_dir_all(&expected).unwrap();
         fs::rename(&cutlass, expected.join(cutlass.file_name().unwrap())).unwrap();
